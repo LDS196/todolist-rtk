@@ -1,29 +1,38 @@
 import React from 'react'
-import { useFormik } from 'formik'
+import {ResponseType} from "common/types";
+import {FormikHelpers, useFormik} from 'formik'
 import { useSelector } from 'react-redux'
-import { loginTC } from 'features/auth/auth.reducer'
 import { Navigate } from 'react-router-dom'
-import { useAppDispatch } from 'common/hooks/useAppDispatch';
 import { Button, Checkbox, FormControl, FormControlLabel, FormGroup, FormLabel, Grid, TextField } from '@mui/material'
+import {authThunk} from 'features/auth/auth.reducer'
+import { useAppDispatch } from 'common/hooks';
 import { selectIsLoggedIn } from 'features/auth/auth.selectors';
+import {LoginParamsType} from "features/auth/auth.api";
+
+type FormikErrorType = {
+    email?: string
+    password?: string
+    rememberMe?: boolean
+}
 
 export const Login = () => {
     const dispatch = useAppDispatch()
-
     const isLoggedIn = useSelector(selectIsLoggedIn)
 
     const formik = useFormik({
         validate: (values) => {
+            const errors: FormikErrorType = {}
             if (!values.email) {
-                return {
-                    email: 'Email is required'
-                }
+                errors.email = 'Required'
+            } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test(values.email)) {
+                errors.email = 'Invalid email address'
             }
             if (!values.password) {
-                return {
-                    password: 'Password is required'
-                }
+                errors.password = 'Required'
+            } else if (values.password.length > 20) {
+                errors.password = 'Invalid password'
             }
+            return errors
 
         },
         initialValues: {
@@ -31,8 +40,17 @@ export const Login = () => {
             password: '',
             rememberMe: false
         },
-        onSubmit: values => {
-            dispatch(loginTC(values));
+        onSubmit: (values, formikHelpers: FormikHelpers<LoginParamsType>) => {
+            dispatch(authThunk.login(values))
+                .unwrap()
+                .catch((reason:ResponseType) => {
+                    const{fieldsErrors}=reason
+                    if(fieldsErrors){
+                        reason.fieldsErrors.forEach(el =>{
+                            formikHelpers.setFieldError(el.field,el.error)
+                        } )
+                    }
+                })
         },
     })
 
@@ -65,14 +83,17 @@ export const Login = () => {
                             margin="normal"
                             {...formik.getFieldProps("email")}
                         />
-                        {formik.errors.email ? <div>{formik.errors.email}</div> : null}
+                        {formik.touched && formik.errors.email ?
+                            <div style={{color: 'red'}}>{formik.errors.email}</div> : null}
+
                         <TextField
                             type="password"
                             label="Password"
                             margin="normal"
                             {...formik.getFieldProps("password")}
                         />
-                        {formik.errors.password ? <div>{formik.errors.password}</div> : null}
+                        {formik.touched && formik.errors.password ?
+                            <div style={{color: 'red'}}>{formik.errors.password}</div> : null}
                         <FormControlLabel
                             label={'Remember me'}
                             control={<Checkbox
