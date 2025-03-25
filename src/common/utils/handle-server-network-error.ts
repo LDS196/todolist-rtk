@@ -7,7 +7,11 @@ export const handleServerNetworkError = (e: unknown, dispatch: Dispatch) => {
 	if (axios.isAxiosError(err)) {
 		const error = err.message ? err.message : 'Some error occurred'
 		dispatch(appActions.setAppError({error}))
+		dispatch(appActions.setAppStatus({status: 'failed'}))
+
 	} else {
 		dispatch(appActions.setAppError({error: `Native error ${err.message}`}))
+		dispatch(appActions.setAppStatus({status: 'failed'}))
+
 	}
 }
